@@ -21,7 +21,7 @@ def sim_forest(board, num_generations, fig_size=(8, 8)):
     plt.show()
 
 
-def evolve_forest(board):
+def evolve_forest(forest, f=1., p=1.):
     """
     Update forest according to forest-fire model defined by Drossel and Schwabl (1992).
     Each cell can be empty (0), occupied by a tree (1), or burning (2). 
@@ -31,9 +31,25 @@ def evolve_forest(board):
     3. A tree ignites with probability f even when no neighbour is burning.
     4. An empty space fills with a tree with probability p.
     """
-    return board
+    # Work with one-hot encoded forest and empty for update
+    one_hot_forest = (np.arange(forest.max()+1) == forest[...,None]).astype(int) # (L^d, [empty, tree, burning])
+    new_one_hot_forest = np.zeros_like(one_hot_forest)
+    # Previously burning cells now empty - RULE 1.
+    new_one_hot_forest[..., 0] = one_hot_forest[..., 2]
+    # Convolve burning 'layer' with nearest-neighbour kernel to find cells with burning neighbours
+    nn_kernel = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]]) # To be made d-dimensional and user-specified.
+    burning_neighbours = ndimage.convolve(one_hot_forest[..., -1], nn_kernel, mode='wrap')
+    # And now set trees with burning neighbours to be burning - RULE 2.
+    new_one_hot_forest[..., 2] = np.array(one_hot_forest[..., 1] * burning_neighbours > 0, dtype=int)
 
 
 if __name__ == "__main__":
-    forest = np.random.randint(0, 2, (20,20))
-    sim_forest(forest, 100)    
+    forest = np.random.randint(0, 3, (5,5))
+#    sim_forest(forest, 100)    
+    one_hot_forest = evolve_forest(forest)
+    print(forest.shape)
+    print(one_hot_forest.shape)
+    print(forest)
+    print()
+    print(one_hot_forest[:, :, -1])
+
