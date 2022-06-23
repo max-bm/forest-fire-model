@@ -20,7 +20,6 @@ def sim_forest(board, num_generations, fig_size=(8, 8)):
     ani = animation.ArtistAnimation(fig, imgs, interval=50, repeat_delay=0, blit=True)
     plt.show()
 
-
 def evolve_forest(forest, f=.5, p=0.):
     """
     Update forest according to forest-fire model defined by Drossel and Schwabl (1992).
@@ -44,7 +43,6 @@ def evolve_forest(forest, f=.5, p=0.):
     # Un-encode one_hot_vector
     updated_forest = np.argmax(oh_update, axis=2)
     return updated_forest
-
 
 def rule_1(oh_forest, oh_update):
     # Previously burning cells now empty - RULE 1.
@@ -72,7 +70,6 @@ def rule_4(oh_forest, oh_update, probs, p):
     oh_update[..., 1] += new_trees
     # Put old empties back into empty layer
     oh_update[..., 0] += (1 - new_trees) * oh_forest[..., 0]
-
 
 if __name__ == "__main__":
     forest = np.random.randint(0, 3, (100,100)) # Make grid size user input, same with probs
