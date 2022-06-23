@@ -17,11 +17,11 @@ def sim_forest(board, num_generations, fig_size=(8, 8)):
         imgs.append([plt.imshow(board, animated=True)])
         board = evolve_forest(board)
 
-    ani = animation.ArtistAnimation(fig, imgs, interval=250, repeat_delay=0, blit=True)
+    ani = animation.ArtistAnimation(fig, imgs, interval=50, repeat_delay=0, blit=True)
     plt.show()
 
 
-def evolve_forest(forest, f=1., p=1.):
+def evolve_forest(forest, f=.5, p=0.):
     """
     Update forest according to forest-fire model defined by Drossel and Schwabl (1992).
     Each cell can be empty (0), occupied by a tree (1), or burning (2). 
@@ -32,7 +32,7 @@ def evolve_forest(forest, f=1., p=1.):
     4. An empty space fills with a tree with probability p.
     """
     # Work with one-hot encoded forest and empty for update
-    one_hot_forest = (np.arange(forest.max()+1) == forest[...,None]).astype(int) # (L^d, [empty, tree, burning])
+    one_hot_forest = (np.arange(3) == forest[...,None]).astype(int) # (L^d, [empty, tree, burning])
     new_one_hot_forest = np.zeros_like(one_hot_forest)
     # Previously burning cells now empty - RULE 1.
     new_one_hot_forest[..., 0] += one_hot_forest[..., 2]
@@ -62,10 +62,6 @@ def evolve_forest(forest, f=1., p=1.):
 
 
 if __name__ == "__main__":
-    forest = np.random.randint(0, 3, (5,5))
-#    sim_forest(forest, 100)    
-    updated_forest = evolve_forest(forest)
-    print(forest)   
-    print()
-    print(updated_forest)
+    forest = np.random.randint(0, 3, (100,100)) # Make grid size user input, same with probs
+    sim_forest(forest, 100) 
 
