@@ -32,33 +32,46 @@ def evolve_forest(forest, f=.5, p=0.):
     4. An empty space fills with a tree with probability p.
     """
     # Work with one-hot encoded forest and empty for update
-    one_hot_forest = (np.arange(3) == forest[...,None]).astype(int) # (L^d, [empty, tree, burning])
-    new_one_hot_forest = np.zeros_like(one_hot_forest)
-    # Previously burning cells now empty - RULE 1.
-    new_one_hot_forest[..., 0] += one_hot_forest[..., 2]
-    # Convolve burning 'layer' with nearest-neighbour kernel to find cells with burning neighbours
+    oh_forest = (np.arange(3) == forest[...,None]).astype(int) # (L^d, [empty, tree, burning])
+    oh_update = np.zeros_like(oh_forest)
+    rule_1(oh_forest, oh_update)
     nn_kernel = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]]) # To be made d-dimensional and user-specified.
-    burning_neighbours = ndimage.convolve(one_hot_forest[..., 2], nn_kernel, mode='wrap')
-    # And now set trees with burning neighbours to be burning - RULE 2.
-    new_burning = np.array(one_hot_forest[..., 1] * burning_neighbours > 0, dtype=int)
-    new_one_hot_forest[..., 2] += new_burning
-    # Now ignore these trees for next rules
-    one_hot_forest[..., 1][new_burning] = 0
+    rule_2(oh_forest, oh_update, nn_kernel)
     # Generate probabilities for monte-carlo update
-    probs = np.random.rand(*one_hot_forest[..., 0].shape)
-    new_burning = np.array(one_hot_forest[..., 1] * probs > (1. - f), dtype=int)
-    # Add new burning trees to new burning layer - RULE 3.
-    new_one_hot_forest[..., 2] += new_burning
-    # Add trees which didn't combust into new tree layer
-    new_one_hot_forest[..., 1] += (1 - new_burning) * one_hot_forest[..., 1]
-    # Add new sprouted trees to new tree layer - RULE 4.
-    new_trees = np.array(one_hot_forest[..., 0] * probs > (1. - p), dtype=int)
-    new_one_hot_forest[..., 1] += new_trees
-    # Put old empties back into empty layer
-    new_one_hot_forest[..., 0] += (1 - new_trees) * one_hot_forest[..., 0]
+    probs = np.random.rand(*oh_forest[..., 0].shape)
+    rule_3(oh_forest, oh_update, probs, f)
+    rule_4(oh_forest, oh_update, probs, p)
     # Un-encode one_hot_vector
-    updated_forest = np.argmax(new_one_hot_forest, axis=2)
+    updated_forest = np.argmax(oh_update, axis=2)
     return updated_forest
+
+
+def rule_1(oh_forest, oh_update):
+    # Previously burning cells now empty - RULE 1.
+    oh_update[..., 0] += oh_forest[..., 2]
+
+def rule_2(oh_forest, oh_update, nn_kernel):
+    # Convolve burning 'layer' with nearest-neighbour kernel to find cells with burning neighbours
+    burning_neighbours = ndimage.convolve(oh_forest[..., 2], nn_kernel, mode='wrap')
+    # And now set trees with burning neighbours to be burning - RULE 2.
+    new_burning = np.array(oh_forest[..., 1] * burning_neighbours > 0, dtype=int)
+    oh_update[..., 2] += new_burning
+    # Now ignore these trees for next rules
+    oh_forest[..., 1][new_burning] = 0
+   
+def rule_3(oh_forest, oh_update, probs, f):
+    # Add new burning trees to new burning layer - RULE 3.
+    new_burning = np.array(oh_forest[..., 1] * probs > (1. - f), dtype=int)
+    oh_update[..., 2] += new_burning
+    # Add trees which didn't combust into new tree layer
+    oh_update[..., 1] += (1 - new_burning) * oh_forest[..., 1]
+    
+def rule_4(oh_forest, oh_update, probs, p):
+    # Add new sprouted trees to new tree layer - RULE 4.
+    new_trees = np.array(oh_forest[..., 0] * probs > (1. - p), dtype=int)
+    oh_update[..., 1] += new_trees
+    # Put old empties back into empty layer
+    oh_update[..., 0] += (1 - new_trees) * oh_forest[..., 0]
 
 
 if __name__ == "__main__":
