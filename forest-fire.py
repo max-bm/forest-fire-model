@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import scipy.ndimage as ndimage
 import matplotlib.animation as animation
 
-def sim_forest(board, num_generations, fig_size=(8, 8)):
+def sim_forest(board, num_generations, f=.5, p=.5, fig_size=(8, 8)):
     """
     Display evolution of the forest on screen (first 2 dimensions if d > 2) for given number of generations. 
     """
@@ -15,12 +15,12 @@ def sim_forest(board, num_generations, fig_size=(8, 8)):
 
     for i in range(num_generations + 1):
         imgs.append([plt.imshow(board, animated=True)])
-        board = evolve_forest(board)
+        board = evolve_forest(board, f, p)
 
     ani = animation.ArtistAnimation(fig, imgs, interval=50, repeat_delay=0, blit=True)
     plt.show()
 
-def evolve_forest(forest, f=.5, p=0.):
+def evolve_forest(forest, f, p):
     """
     Update forest according to forest-fire model defined by Drossel and Schwabl (1992).
     Each cell can be empty (0), occupied by a tree (1), or burning (2). 
@@ -34,7 +34,7 @@ def evolve_forest(forest, f=.5, p=0.):
     oh_forest = (np.arange(3) == forest[...,None]).astype(int) # (L^d, [empty, tree, burning])
     oh_update = np.zeros_like(oh_forest)
     rule_1(oh_forest, oh_update)
-    nn_kernel = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]]) # To be made d-dimensional and user-specified.
+    nn_kernel = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]]) 
     rule_2(oh_forest, oh_update, nn_kernel)
     # Generate probabilities for monte-carlo update
     probs = np.random.rand(*oh_forest[..., 0].shape)
@@ -71,7 +71,13 @@ def rule_4(oh_forest, oh_update, probs, p):
     # Put old empties back into empty layer
     oh_update[..., 0] += (1 - new_trees) * oh_forest[..., 0]
 
+
 if __name__ == "__main__":
-    forest = np.random.randint(0, 3, (100,100)) # Make grid size user input, same with probs
-    sim_forest(forest, 100) 
+    print("Forest-fire model simulation.")
+    grid_size = input("Enter grid size:")
+    f = input("Enter tree ignition probability, f:")
+    p = input("Enter tree growth probability, p:")
+    generations = input("Enter number of generations:")
+    forest = np.random.randint(0, 3, (int(grid_size), int(grid_size))) 
+    sim_forest(forest, int(generations), float(f), float(p)) 
 
