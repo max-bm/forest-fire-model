@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import scipy.ndimage as ndimage
 import matplotlib.animation as animation
 
-def sim_forest(board, num_generations, f=.5, p=.5, fig_size=(8, 8)):
+def sim_forest(forest, num_generations, f=.5, p=.5, fig_size=(8, 8)):
     """
     Display evolution of the forest on screen (first 2 dimensions if d > 2) for given number of generations. 
     """
@@ -14,8 +14,8 @@ def sim_forest(board, num_generations, f=.5, p=.5, fig_size=(8, 8)):
     imgs = []
 
     for i in range(num_generations + 1):
-        imgs.append([plt.imshow(board, animated=True)])
-        board = evolve_forest(board, f, p)
+        imgs.append([plt.imshow(forest[(slice(None), slice(None)) + (0,)*(forest.ndim-2)], animated=True)])
+        forest = evolve_forest(forest, f, p)
 
     ani = animation.ArtistAnimation(fig, imgs, interval=50, repeat_delay=0, blit=True)
     plt.show()
@@ -30,11 +30,12 @@ def evolve_forest(forest, f, p):
     3. A tree ignites with probability f even when no neighbour is burning.
     4. An empty space fills with a tree with probability p.
     """
+    d = forest.ndim
     # Work with one-hot encoded forest and empty for update
     oh_forest = (np.arange(3) == forest[...,None]).astype(int) # (L^d, [empty, tree, burning])
     oh_update = np.zeros_like(oh_forest)
+    nn_kernel = generate_nn_kernel(d)
     rule_1(oh_forest, oh_update)
-    nn_kernel = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]]) 
     rule_2(oh_forest, oh_update, nn_kernel)
     # Generate probabilities for monte-carlo update
     probs = np.random.rand(*oh_forest[..., 0].shape)
@@ -44,28 +45,45 @@ def evolve_forest(forest, f, p):
     updated_forest = np.argmax(oh_update, axis=2)
     return updated_forest
 
+def generate_nn_kernel(d):
+    """
+    Function to generate nearest neighbour kernel in d-dimensions.
+    """
+    k = np.zeros((3, ) * d)
+    for i in range(d):
+        k[(1,)*i + (slice(None),) + (1,)*(d-i-1)] = np.array([1, 0, 1])
+    return k
+
 def rule_1(oh_forest, oh_update):
-    # Previously burning cells now empty - RULE 1.
+    """
+    Forest-fire model rule 1: burning cells become empty cells.
+    """
     oh_update[..., 0] += oh_forest[..., 2]
 
 def rule_2(oh_forest, oh_update, nn_kernel):
+    """
+    Forest-fire model rule 2: trees with burning neighbours start burning.
+    """
     # Convolve burning 'layer' with nearest-neighbour kernel to find cells with burning neighbours
     burning_neighbours = ndimage.convolve(oh_forest[..., 2], nn_kernel, mode='wrap')
-    # And now set trees with burning neighbours to be burning - RULE 2.
     new_burning = np.array(oh_forest[..., 1] * burning_neighbours > 0, dtype=int)
     oh_update[..., 2] += new_burning
     # Now ignore these trees for next rules
     oh_forest[..., 1][new_burning] = 0
    
 def rule_3(oh_forest, oh_update, probs, f):
-    # Add new burning trees to new burning layer - RULE 3.
+    """
+    Forest-fire model rule 3: trees spontaneously ignite with probability f.
+    """
     new_burning = np.array(oh_forest[..., 1] * probs > (1. - f), dtype=int)
     oh_update[..., 2] += new_burning
     # Add trees which didn't combust into new tree layer
     oh_update[..., 1] += (1 - new_burning) * oh_forest[..., 1]
     
 def rule_4(oh_forest, oh_update, probs, p):
-    # Add new sprouted trees to new tree layer - RULE 4.
+    """
+    Forest-fire model rule 4: trees spontaneously grow with probability p.
+    """
     new_trees = np.array(oh_forest[..., 0] * probs > (1. - p), dtype=int)
     oh_update[..., 1] += new_trees
     # Put old empties back into empty layer
@@ -79,6 +97,6 @@ if __name__ == "__main__":
     f = input("Enter tree ignition probability, f:")
     p = input("Enter tree growth probability, p:")
     generations = input("Enter number of generations:")
-    forest = np.random.randint(0, 3, (int(grid_size), int(grid_size))) 
+    forest = np.random.randint(0, 3, (int(grid_size), ) * int(d)) 
     sim_forest(forest, int(generations), float(f), float(p)) 
 
