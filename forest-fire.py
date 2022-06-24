@@ -75,6 +75,7 @@ def rule_4(oh_forest, oh_update, probs, p):
 if __name__ == "__main__":
     print("Forest-fire model simulation.")
     grid_size = input("Enter grid size:")
+    d = input("Enter the dimensionality of the system:")
     f = input("Enter tree ignition probability, f:")
     p = input("Enter tree growth probability, p:")
     generations = input("Enter number of generations:")
