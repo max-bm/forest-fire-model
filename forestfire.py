@@ -33,7 +33,7 @@ def evolve_forest(forest, f, p):
     """
     d = forest.ndim
     # Work with one-hot encoded forest and empty for update
-    oh_forest = (np.arange(3) == forest[...,None]).astype(int) # (L^d, [empty, tree, burning])
+    oh_forest = forest_to_one_hot(forest)
     oh_update = np.zeros_like(oh_forest)
     nn_kernel = von_neumann_kernel(d)
     rule_1(oh_forest, oh_update)
@@ -45,6 +45,10 @@ def evolve_forest(forest, f, p):
     # Un-encode one_hot_vector
     updated_forest = np.argmax(oh_update, axis=2)
     return updated_forest
+
+def forest_to_one_hot(forest):
+    oh_forest = (np.arange(3) == forest[...,None]).astype(int) # (L^d, [empty, tree, burning])
+    return oh_forest
 
 def rule_1(oh_forest, oh_update):
     """
