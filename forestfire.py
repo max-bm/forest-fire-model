@@ -43,12 +43,15 @@ def evolve_forest(forest, f, p):
     rule_3(oh_forest, oh_update, probs, f)
     rule_4(oh_forest, oh_update, probs, p)
     # Un-encode one_hot_vector
-    updated_forest = np.argmax(oh_update, axis=2)
+    updated_forest = one_hot_to_forest(oh_update)
     return updated_forest
 
 def forest_to_one_hot(forest):
     oh_forest = (np.arange(3) == forest[...,None]).astype(int) # (L^d, [empty, tree, burning])
     return oh_forest
+
+def one_hot_to_forest(oh_forest):
+    return np.argmax(oh_forest, axis=-1)
 
 def rule_1(oh_forest, oh_update):
     """
