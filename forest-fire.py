@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.ndimage as ndimage
 import matplotlib.animation as animation
+from kernels import von_neumann_kernel
 
 def sim_forest(forest, num_generations, f=.5, p=.5, fig_size=(8, 8)):
     """
@@ -34,7 +35,7 @@ def evolve_forest(forest, f, p):
     # Work with one-hot encoded forest and empty for update
     oh_forest = (np.arange(3) == forest[...,None]).astype(int) # (L^d, [empty, tree, burning])
     oh_update = np.zeros_like(oh_forest)
-    nn_kernel = generate_nn_kernel(d)
+    nn_kernel = von_neumann_kernel(d)
     rule_1(oh_forest, oh_update)
     rule_2(oh_forest, oh_update, nn_kernel)
     # Generate probabilities for monte-carlo update
@@ -44,15 +45,6 @@ def evolve_forest(forest, f, p):
     # Un-encode one_hot_vector
     updated_forest = np.argmax(oh_update, axis=2)
     return updated_forest
-
-def generate_nn_kernel(d):
-    """
-    Function to generate nearest neighbour kernel in d-dimensions.
-    """
-    k = np.zeros((3, ) * d)
-    for i in range(d):
-        k[(1,)*i + (slice(None),) + (1,)*(d-i-1)] = np.array([1, 0, 1])
-    return k
 
 def rule_1(oh_forest, oh_update):
     """
